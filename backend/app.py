@@ -47,55 +47,28 @@ league_model = api.model('League', {
     'fixtures_today': fields.List(fields.Raw)  # Raw because fixture details are nested/dynamic
 })
 
+headers = {
+  'x-rapidapi-key': api_key,
+  'x-rapidapi-host': 'v3.football.api-sports.io'
+}
+
+
+# 
+
 @ns_getLeagues.route('/')
 class GetLeagues(Resource):
     @api.response(200, 'Success')
     @api.marshal_list_with(league_model)
     def get(self):
-        today = datetime.now().strftime('%Y-%m-%d')
 
-        # 1. Get all leagues
-        leagues_response = requests.get(leagues_url, headers=headers)
-        all_leagues = leagues_response.json()['response']
+        uri = "https://api.sportmonks.com/v3/football/fixtures"
+        params = {
+            "api_token": str(os.getenv("API_KEY_MONK"))
+        }
 
-        output = []
-
-        for item in all_leagues:
-            league = item['league']
-            if league['id'] in leagues_id:
-                # 2. Get fixtures for this league
-                params = {
-                    'league': league['id'],
-                    'date': today
-                }
-                fixtures_response = requests.get(fixtures_url, headers=headers, params=params)
-                fixtures = fixtures_response.json().get('response', [])
-
-                # Optional: simplify fixture data if needed
-                simplified_fixtures = []
-                for f in fixtures:
-                    simplified_fixtures.append({
-                        'teams': {
-                            'home': f['teams']['home']['name'],
-                            'away': f['teams']['away']['name'],
-                        },
-                        'time': f['fixture']['date'],
-                        'status': f['fixture']['status']['short'],
-                        'venue': f['fixture']['venue']['name'],
-                    })
-
-                output.append({
-                    'id': league['id'],
-                    'name': league['name'],
-                    'country': item['country']['name'],
-                    'logo': league['logo'],
-                    'flag': item['country'].get('flag', ''),
-                    'fixtures_today': simplified_fixtures
-                })
-
-        print(output)
-
-        return output
+        res = requests.get(uri, params=params)
+        print(res.text)
+        return res.text
 
 if __name__ == '__main__':
     app.run(debug=True)
